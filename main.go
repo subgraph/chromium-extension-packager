@@ -167,9 +167,10 @@ func main() {
 			},
 		},
 		{
-			Name:   "update",
-			Usage:  "[uuid] update extension(s) package(s)",
-			Action: updateExtensions,
+			Name:    "update",
+			Aliases: []string{"build"},
+			Usage:   "[uuid] update extension(s) package(s)",
+			Action:  updateExtensions,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "uid",
