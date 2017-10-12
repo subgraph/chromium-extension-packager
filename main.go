@@ -1,24 +1,3 @@
-// XXX? Remove artifacts on removing extension
-// XXX? Remove artifacts on force update
-// XXX: Remove artifacts on download/prepare/build failures
-// XXX: Add upstream website to control
-// XXX: Add explenatory LICENSE file
-// XXX? Add support for pbuilder
-// XXX: Dpkg lint...
-// 		> E: chromium-extension-reddit-enhancement-suite source: source-is-missing sources/background.entry.js line length is 536 characters (>512)
-// 		> E: chromium-extension-reddit-enhancement-suite source: source-is-missing sources/main.entry.js line length is 797 characters (>512)
-// 		> W: chromium-extension-reddit-enhancement-suite: extra-license-file usr/share/chromium/extensions/reddit-enhancement-suite/LICENSE
-// 		> W: chromium-extension-https-everywhere: script-not-executable usr/share/chromium/extensions/https-everywhere/chrome-resources/update-from-chrome-svn.sh
-// 		> W: chromium-extension-editthiscookie: extended-description-line-too-long
-// 		> W: chromium-extension-editthiscookie: extra-license-file usr/share/chromium/extensions/editthiscookie/License.txt
-// 		> W: chromium-extension-editthiscookie: duplicate-font-file usr/share/chromium/extensions/editthiscookie/css/font-awesome-4.6.3/fonts/FontAwesome.otf also in fonts-font-awesome
-// 		> W: chromium-extension-editthiscookie: duplicate-font-file usr/share/chromium/extensions/editthiscookie/css/font-awesome-4.6.3/fonts/fontawesome-webfont.ttf also in fonts-font-awesome
-// 		> W: chromium-extension-editthiscookie: embedded-javascript-library usr/share/chromium/extensions/editthiscookie/lib/tablesorter/jquery.tablesorter.min.js please use libjs-jquery-tablesorter
-// 		> E: chromium-extension-editthiscookie: privacy-breach-donation usr/share/chromium/extensions/editthiscookie/options_pages/support.html (https://www.paypalobjects.com/i/btn/btn_donate_sm.gif)
-// 		> W: chromium-extension-umatrix: extra-license-file usr/share/chromium/extensions/umatrix/css/fonts/Roboto_Condensed/LICENSE.txt
-// 		> W: chromium-extension-umatrix: duplicate-font-file usr/share/chromium/extensions/umatrix/css/fonts/Roboto_Condensed/RobotoCondensed-Bold.ttf also in fonts-roboto-unhinted
-// 		> W: chromium-extension-umatrix: duplicate-font-file usr/share/chromium/extensions/umatrix/css/fonts/Roboto_Condensed/RobotoCondensed-BoldItalic.ttf also in fonts-roboto-unhinted
-
 package main
 
 import (
