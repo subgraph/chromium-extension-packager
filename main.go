@@ -556,7 +556,6 @@ func (e *Extension) fetchExtensionInfo() error {
 		oldt := e.Version.Tag
 		e.NewVersion = Version{Version: v[1]}
 		e.NewVersion.parse()
-		//fmt.Printf("A: %b (%s), B: %b C: %d %d\n", (oldv == ""), oldv, (oldt < e.NewVersion.Tag), oldt, e.NewVersion.Tag)
 		if oldv == "" || oldt < e.NewVersion.Tag {
 			e.UpdateAvailable = true
 		}
