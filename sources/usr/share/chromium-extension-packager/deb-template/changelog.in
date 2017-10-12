@@ -1,0 +1,5 @@
+chromium-extension-{{.PathName}} ({{.Version}}) aaron; urgency=low
+
+  * New upstream release pull from webstore: {{.Version}}
+
+ -- {{.Author}} <{{.Email}}>  {{.Date}}

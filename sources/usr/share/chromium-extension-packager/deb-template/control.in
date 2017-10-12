@@ -1,0 +1,19 @@
+Source: chromium-extension-{{.PathName}}
+Section: web
+Priority: optional
+Maintainer: {{.Author}} <{{.Email}}>
+Build-Depends:
+ debhelper (>= 9),
+Standards-Version: 3.9.8
+Homepage: {{.URL}}
+
+Package: chromium-extension-{{.PathName}}
+Architecture: all
+Section: web
+Priority: optional
+Depends:
+ ${misc:Depends},
+Recommends:
+ chromium,
+Description: {{.DescShort}}
+{{.DescLong}}
