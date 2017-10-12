@@ -6,7 +6,7 @@ its webstore page, downloading any available updates, and packaging them as Debi
 ## Usage
 
 Make sure the directory `/var/lib/chromium-extension-packager` exists and is writable by the user
-who will be running the scrupt.
+who will be running the script.
 
 
 ```
