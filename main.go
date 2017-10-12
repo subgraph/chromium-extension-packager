@@ -1,3 +1,4 @@
+// XXX: Check that itemprop="price" == 0, fail otherwise
 package main
 
 import (
@@ -84,7 +85,7 @@ const (
 
 var nameRegexp = regexp.MustCompile(`itemprop="name" content="([^"]+)"`).FindStringSubmatch
 var versionRegexp = regexp.MustCompile(`itemprop="version" content="(([0-9]+.?)+[0-9]?)"`).FindStringSubmatch
-var descriptionRegexp = regexp.MustCompile(`itemprop="description">(.+)</div>`).FindStringSubmatch
+var descriptionRegexp = regexp.MustCompile(`<div [^>]*itemprop="description">(.+)</div>`).FindStringSubmatch
 var uidRegexp = regexp.MustCompile(`^[a-zA-Z0-9]{32}$`).MatchString
 
 var extensions []Extension
