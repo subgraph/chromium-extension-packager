@@ -145,21 +145,23 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:   "list",
-			Usage:  "[uuid] print extensions information",
+			Usage:  "[uuid] Print extensions information",
 			Action: listExtensions,
 			Flags: []cli.Flag{
 				cli.BoolFlag{
-					Name: "fetch",
+					Name:  "fetch",
+					Usage: "Fetch extension information from webstore",
 				},
 				cli.StringFlag{
 					Name:  "uid",
 					Value: "",
+					Usage: "Only display extension with specific uid",
 				},
 			},
 		},
 		{
 			Name:   "add",
-			Usage:  "<uuid> add an extension to the list",
+			Usage:  "<uuid> Add an extension to the list",
 			Action: addExtension,
 			Flags: []cli.Flag{
 				cli.BoolFlag{
@@ -175,7 +177,7 @@ func main() {
 		},
 		{
 			Name:   "remove",
-			Usage:  "<uuid> remove an extension from the list",
+			Usage:  "<uuid> Remove an extension from the list",
 			Action: removeExtension,
 			Flags: []cli.Flag{
 				cli.StringFlag{
