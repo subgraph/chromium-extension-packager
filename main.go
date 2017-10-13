@@ -351,6 +351,8 @@ func addExtension(c *cli.Context) {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
+	
+	listExtensions(c)
 }
 
 func askConfirm(msg string) bool {
