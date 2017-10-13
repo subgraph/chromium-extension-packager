@@ -237,6 +237,10 @@ func main() {
 					Name:  "batch",
 					Usage: "Use batch mode (disable prompting for possible overrides)",
 				},
+				cli.BoolFlag{
+					Name:  "download-only",
+					Usage: "Only download the extension pack, don't build anything",
+				},
 			},
 		},
 	}
@@ -351,7 +355,7 @@ func addExtension(c *cli.Context) {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	
+
 	listExtensions(c)
 }
 
@@ -423,6 +427,7 @@ func updateExtensions(c *cli.Context) {
 	verbose := c.Bool("verbose")
 	sk := c.String("singing-key")
 	batch := c.Bool("batch")
+	downloadOnly := c.Bool("download-only")
 	force := c.Bool("force")
 	uid := c.String("uid")
 	if uid != "" && !uidRegexp(uid) {
@@ -459,12 +464,19 @@ func updateExtensions(c *cli.Context) {
 					extensions[ii].UID,
 					extensions[ii].NewVersion.String())
 			}
+			oldv := extensions[ii].Version
 			extensions[ii].Version.Version = extensions[ii].NewVersion.String()
 			extensions[ii].Version.parse()
 			err := extensions[ii].downloadExtensionPack()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Unable to download extension: %+v\n", err)
 				os.Exit(1)
+			}
+
+			if downloadOnly {
+				extensions[ii].Version = oldv
+				extensions[ii].Version.parse()
+				continue
 			}
 
 			err = extensions[ii].prepareExtensionPackage(batch)
