@@ -44,4 +44,5 @@ chromium-extension-https-everywhere:
         500 file:/var/lib/chromium-extension-packager/builds ./ Packages
 
 $ sudo apt install chromium-extension-https-everywhere
+[...]
 ```
