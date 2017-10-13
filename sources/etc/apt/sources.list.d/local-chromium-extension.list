@@ -1,0 +1,2 @@
+deb [ allow-insecure=yes trusted=yes ] file:/var/lib/chromium-extension-packager/builds ./
+deb-src [ allow-insecure=yes trusted=yes ] file:/var/lib/chromium-extension-packager/builds ./

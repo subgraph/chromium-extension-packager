@@ -4,6 +4,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -445,7 +446,13 @@ func updateExtensions(c *cli.Context) {
 	if !found {
 		fmt.Println("No extension require updating.")
 	} else {
-		err := saveExtensionList()
+		err := buildPackageIndex()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error building indexes: %v\n", err)
+			os.Exit(1)
+		}
+
+		err = saveExtensionList()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -820,6 +827,120 @@ func (e *Extension) buildExtensionPackage(verbose bool, singingKey string) error
 	}
 
 	return nil
+}
+
+func buildPackageIndex() error {
+	bp := path.Join(WORK_DIR, DEB_RESULTS)
+	if _, err := os.Stat(bp); err != nil {
+		return err
+	}
+
+	packages, err := runDpkgIndexer(bp, INDEX_PACKAGES)
+	if err != nil {
+		return fmt.Errorf("Unable to run package indexer: %v", err)
+	}
+
+	sources, err := runDpkgIndexer(bp, INDEX_SOURCES)
+	if err != nil {
+		return fmt.Errorf("Unable to run sources indexer: %v", err)
+	}
+
+	var pbuf bytes.Buffer
+	zwp := gzip.NewWriter(&pbuf)
+	zwp.Name = "Packages"
+	_, err = zwp.Write(packages)
+	if err != nil {
+		return fmt.Errorf("Unable to compress packages index: %v", err)
+	}
+	defer func() {
+		if err := zwp.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	err = ioutil.WriteFile(path.Join(bp, "Packages"), packages, 0644)
+	if err != nil {
+		return fmt.Errorf("Unable to write packages index: %v", err)
+	}
+	err = ioutil.WriteFile(path.Join(bp, "Packages.gz"), pbuf.Bytes(), 0644)
+	if err != nil {
+		return fmt.Errorf("Unable to write compressed packages index: %v", err)
+	}
+
+	var sbuf bytes.Buffer
+	zws := gzip.NewWriter(&sbuf)
+	zws.Name = "Packages"
+	_, err = zws.Write(sources)
+	if err != nil {
+		return fmt.Errorf("Unable to compress sources index: %v", err)
+	}
+	defer func() {
+		if err := zws.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	err = ioutil.WriteFile(path.Join(bp, "Sources"), sources, 0644)
+	if err != nil {
+		return fmt.Errorf("Unable to write sources index: %v", err)
+	}
+	err = ioutil.WriteFile(path.Join(bp, "Sources.gz"), sbuf.Bytes(), 0644)
+	if err != nil {
+		return fmt.Errorf("Unable to write compressed sources index: %v", err)
+	}
+/*
+	release := `Origin: subgraph
+Label: chromium-extension-packager
+Architecture: all
+Date: DATE_FORMAT
+Component: main
+Description: Local repository of automatically packaged Chromium Extensions`
+	rbuf := bytes.NewBufferString(strings.Replace(release, DATE_FORMAT, time.Now().UTC().Format(DATE_FORMAT), -1))
+	err = ioutil.WriteFile(path.Join(bp, "Release"), rbuf.Bytes(), 0644)
+	if err != nil {
+		return fmt.Errorf("Unable to write release file: %v", err)
+	}
+*/
+	return nil
+}
+
+type indexTypes int
+
+const (
+	INDEX_PACKAGES = 1 << iota
+	INDEX_SOURCES
+)
+
+func runDpkgIndexer(dir string, it indexTypes) ([]byte, error) {
+	en := "dpkg-scan"
+	switch it {
+	case INDEX_PACKAGES:
+		en = en + "packages"
+	case INDEX_SOURCES:
+		en = en + "sources"
+	default:
+		return nil, errors.New("Unknown index type")
+	}
+
+	args := []string{"."} //, "/dev/null"}
+	cmd := exec.Command(en, args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ())
+
+	cmd.Env = append(cmd.Env, "DPKG_COLORS=never")
+	pe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("error creating stderr pipe for build process: %v", err)
+	}
+
+	go printBuildOut(pe, os.Stderr)
+
+	result, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func printBuildOut(pp io.ReadCloser, out *os.File) {
