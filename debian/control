@@ -1,0 +1,19 @@
+Source: chromium-extension-packager
+Section: web
+Priority: extra
+Maintainer: Subgraph <info@subgraph.com>
+Build-Depends: debhelper (>= 9),
+               dh-golang,
+               golang-go,
+Standards-Version: 3.9.8
+Homepage: https://github.com/subgraph/chromium-extension-packager
+Vcs-Git: https://github.com/subgraph/chromium-extension-packager.git
+XS-Go-Import-Path: github.com/subgraph/chromium-extension-packager
+
+Package: chromium-extension-packager
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: dpkg-dev, ${shlibs:Depends}, ${misc:Depends}
+Description: Subgraph Chromium Extension Packager
+ This program automates building Debian packages for 
+ Chromium extensions.
