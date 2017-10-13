@@ -4,15 +4,15 @@ This program helps maintain a list of chromium extensions, check them for update
 its webstore page, downloading any available updates, and packaging them as Debian packages.
 Once done, it generates a package and source index for using as a local apt repository.
 
-## Building
+## Building & Installing
 
-Debian Package TBD...
+A Debian package is provided using git-buildpackage in the [debian branch](https://github.com/subgraph/chromium-extension-packager/tree/debian).
+
+The package provides a cron to check for updates twice a day, and installs the local repository to the apt sources.
 
 ## Usage
 
-Make sure the directory `/var/lib/chromium-extension-packager` exists and is writable by the user
-who will be running the script.
-
+This program expects to run as `root`, or as `_apt`.
 
 ```
 COMMANDS:
