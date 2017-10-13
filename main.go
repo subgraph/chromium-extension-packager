@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -93,12 +94,52 @@ var extensions []Extension
 var chromiumVersion string
 
 func init() {
-	if _, err := os.Stat(WORK_DIR); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Unable to find work directory: %s\n"+WORK_DIR)
+	uu, err := user.Lookup("_apt")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not lookup user `_apt`: %v\n", err)
+		os.Exit(1)
+	}
+	ui, _ := strconv.Atoi(uu.Uid)
+
+	gg, err := user.LookupGroup("nogroup")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not lookup group `nobody`: %v\n", err)
+		os.Exit(1)
+	}
+	gi, _ := strconv.Atoi(gg.Gid)
+
+	cuid := syscall.Getuid()
+	if cuid != 0 && cuid != ui {
+		fmt.Fprintf(os.Stderr, "Should be launched as `root` or `_apt` user!\n")
 		os.Exit(1)
 	}
 
-	_, err := getChromiumVersion()
+	_, err = os.Stat(WORK_DIR)
+	if err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(WORK_DIR, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Could not create work path '%s': %v\n", WORK_DIR, err)
+			os.Exit(1)
+		}
+
+		if err := os.Chown(WORK_DIR, ui, gi); err != nil {
+			fmt.Fprintf(os.Stderr, "Could not chown work path '%s': %v\n", WORK_DIR, err)
+			os.Exit(1)
+		}
+	} else if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not create work path '%s': %v\n", WORK_DIR, err)
+		os.Exit(1)
+	}
+
+	if _, _, en := syscall.Syscall(syscall.SYS_SETGID, uintptr(gi), 0, 0); en != 0 {
+		fmt.Fprintf(os.Stderr, "Unable to drop group privilege (%d): %v\n", gi, syscall.Errno(en))
+		os.Exit(1)
+	}
+	if _, _, en := syscall.Syscall(syscall.SYS_SETUID, uintptr(ui), 0, 0); en != 0 {
+		fmt.Fprintf(os.Stderr, "Unable to drop user privilege (%d): %v\n", ui, syscall.Errno(en))
+		os.Exit(1)
+	}
+
+	_, err = getChromiumVersion()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to get chromium version: %+v\n", err)
 		os.Exit(1)
@@ -487,13 +528,13 @@ func saveExtensionList() error {
 	json, err := json.Marshal(&List{Extensions: extensions})
 
 	if err != nil {
-		return fmt.Errorf("Error: could not generate extension list:", err, "\n")
+		return fmt.Errorf("Error: could not generate extension list: %v", err)
 	}
 
 	err = ioutil.WriteFile(cpath, json, 0644)
 
 	if err != nil {
-		return fmt.Errorf("Error: could not save extension list:", err, "\n")
+		return fmt.Errorf("Error: could not save extension list: %v", err)
 	}
 
 	return nil
@@ -703,7 +744,7 @@ func (e *Extension) prepareExtensionPackage(batchMode bool) (err error) {
 	hash := sha1.Sum(data)
 	re, err := x509.ParsePKIXPublicKey(pk)
 	if err != nil {
-		return fmt.Errorf("Error parsing public key for %s: %v\n", e.Name, err)
+		return fmt.Errorf("Error parsing public key for %s: %v", e.Name, err)
 	}
 	pkhash := sha256.Sum256(pk)
 	if e.PublicKey == "" {
@@ -716,7 +757,7 @@ func (e *Extension) prepareExtensionPackage(batchMode bool) (err error) {
 	rk := re.(*rsa.PublicKey)
 	err = rsa.VerifyPKCS1v15(rk, crypto.SHA1, hash[:], sign)
 	if err != nil {
-		return fmt.Errorf("Error verifying signature for %s: %v\n", e.Name, err)
+		return fmt.Errorf("Error verifying signature for %s: %v", e.Name, err)
 	}
 	buf := bytes.NewReader(data)
 	r, err := zip.NewReader(buf, ld)
@@ -888,19 +929,19 @@ func buildPackageIndex() error {
 	if err != nil {
 		return fmt.Errorf("Unable to write compressed sources index: %v", err)
 	}
-/*
-	release := `Origin: subgraph
-Label: chromium-extension-packager
-Architecture: all
-Date: DATE_FORMAT
-Component: main
-Description: Local repository of automatically packaged Chromium Extensions`
-	rbuf := bytes.NewBufferString(strings.Replace(release, DATE_FORMAT, time.Now().UTC().Format(DATE_FORMAT), -1))
-	err = ioutil.WriteFile(path.Join(bp, "Release"), rbuf.Bytes(), 0644)
-	if err != nil {
-		return fmt.Errorf("Unable to write release file: %v", err)
-	}
-*/
+	/*
+		release := `Origin: subgraph
+		Label: chromium-extension-packager
+		Architecture: all
+		Date: DATE_FORMAT
+		Component: main
+		Description: Local repository of automatically packaged Chromium Extensions`
+		rbuf := bytes.NewBufferString(strings.Replace(release, DATE_FORMAT, time.Now().UTC().Format(DATE_FORMAT), -1))
+		err = ioutil.WriteFile(path.Join(bp, "Release"), rbuf.Bytes(), 0644)
+		if err != nil {
+			return fmt.Errorf("Unable to write release file: %v", err)
+		}
+	*/
 	return nil
 }
 
@@ -928,13 +969,13 @@ func runDpkgIndexer(dir string, it indexTypes) ([]byte, error) {
 	cmd.Env = append(os.Environ())
 
 	cmd.Env = append(cmd.Env, "DPKG_COLORS=never")
-	pe, err := cmd.StderrPipe()
-	if err != nil {
-		return nil, fmt.Errorf("error creating stderr pipe for build process: %v", err)
-	}
-
-	go printBuildOut(pe, os.Stderr)
-
+	/*
+		pe, err := cmd.StderrPipe()
+		if err != nil {
+			return nil, fmt.Errorf("error creating stderr pipe for build process: %v", err)
+		}
+		go printBuildOut(pe, os.Stderr)
+	*/
 	result, err := cmd.Output()
 	if err != nil {
 		return nil, err
