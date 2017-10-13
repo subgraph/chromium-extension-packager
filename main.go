@@ -77,7 +77,8 @@ const (
 	LIST_FILE    string = "extensions.json"
 	DEB_TEMPLATE string = "deb-template"
 	DOWNLOAD_DIR string = "archive"
-	DEB_RESULTS  string = "builds"
+	BUILD_DIR    string = "builds"
+	REPO_DIR     string = "repo"
 	URL_DOWNLOAD string = "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=$CHROMIUM_VERSION$&x=id%3D$UID$%26uc"
 	URL_INFO     string = "https://chrome.google.com/webstore/detail/$UID$"
 	PKG_AUTHOR   string = "Subgraph Automated Packager"
@@ -495,6 +496,14 @@ func updateExtensions(c *cli.Context) {
 					extensions[ii].UID,
 					extensions[ii].Version.String())
 			}
+
+			err = extensions[ii].moveFinishedBuild()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to move extension package to repository: %+v\n", err)
+				os.Exit(1)
+			} else {
+				fmt.Println("Extension added to repository.")
+			}
 		}
 	}
 
@@ -669,7 +678,7 @@ func (e *Extension) downloadExtensionPack() error {
 
 /*
 func getExtensionBuildPath() string {
-	bp := path.Join(WORK_DIR, DEB_RESULTS)
+	bp := path.Join(WORK_DIR, BUILD_DIR)
 	_, err := os.Stat(bp)
 	if err != nil && !os.IsNotExist(err) {
 		if err := os.MkdirAll(bp, 0755); err != nil {
@@ -684,7 +693,7 @@ func getExtensionBuildPath() string {
 }
 */
 func (e *Extension) prepareExtensionPackage(batchMode bool) (err error) {
-	bp := path.Join(WORK_DIR, DEB_RESULTS)
+	bp := path.Join(WORK_DIR, BUILD_DIR)
 	_, err = os.Stat(bp)
 	if err != nil && os.IsNotExist(err) {
 		if err := os.MkdirAll(bp, 0755); err != nil {
@@ -732,7 +741,7 @@ func (e *Extension) prepareExtensionPackage(batchMode bool) (err error) {
 	pn := filepath.Clean(path.Join(bp, bname, "debian", "loader", pname))
 	err = os.Rename(pl, pn)
 	if err != nil {
-		return fmt.Errorf("Could not move loder template: %+v", err)
+		return fmt.Errorf("Could not move loader template: %+v", err)
 	}
 
 	sp := path.Join(bp, bname, "sources")
@@ -838,7 +847,7 @@ func (e *Extension) prepareExtensionPackage(batchMode bool) (err error) {
 }
 
 func (e *Extension) buildExtensionPackage(verbose bool, singingKey string) error {
-	bp := path.Join(WORK_DIR, DEB_RESULTS)
+	bp := path.Join(WORK_DIR, BUILD_DIR)
 	pname := strings.ToLower(strings.Replace(e.Name, " ", "-", -1))
 	bname := strings.Join([]string{pname, e.Version.String()}, "-")
 	sp := path.Join(bp, bname)
@@ -884,8 +893,49 @@ func (e *Extension) buildExtensionPackage(verbose bool, singingKey string) error
 	return nil
 }
 
+func (e *Extension) moveFinishedBuild() error {
+	bp := path.Join(WORK_DIR, BUILD_DIR)
+	rp := path.Join(WORK_DIR, REPO_DIR)
+	pname := strings.ToLower(strings.Replace(e.Name, " ", "-", -1))
+	bname := strings.Join([]string{pname, e.Version.String()}, "_")
+	_, err := os.Stat(rp)
+	if err != nil && os.IsNotExist(err) {
+		if err := os.MkdirAll(rp, 0755); err != nil {
+			return fmt.Errorf("could not create repo path '%s': %v", rp, err)
+		}
+	} else if err != nil {
+		return nil
+	}
+	ba, err := exec.Command("dpkg", "--print-architecture").Output()
+	if err != nil {
+		return err
+	}
+	arch := strings.TrimSpace(string(ba))
+	cname := "chromium-extension-" + bname
+	keeps := []string{"_all.deb", ".dsc", ".tar.xz"}
+	discards := []string{arch + ".buildinfo", arch + ".changes"}
+	for _, keep := range keeps {
+		fname := strings.Join([]string{cname, keep}, "")
+		pl := filepath.Clean(path.Join(bp, fname))
+		pn := filepath.Clean(path.Join(rp, fname))
+		err = os.Rename(pl, pn)
+		if err != nil {
+			return fmt.Errorf("Could not move package result `%s` to repo: %+v", fname, err)
+		}
+	}
+	for _, discard := range discards {
+		fname := strings.Join([]string{cname, discard}, "_")
+		pl := filepath.Clean(path.Join(bp, fname))
+		err = os.Remove(pl)
+		if err != nil {
+			return fmt.Errorf("Could not remove spurious file `%s`: %+v", fname, err)
+		}
+	}
+	return nil
+}
+
 func buildPackageIndex() error {
-	bp := path.Join(WORK_DIR, DEB_RESULTS)
+	bp := path.Join(WORK_DIR, REPO_DIR)
 	if _, err := os.Stat(bp); err != nil {
 		return err
 	}
@@ -1003,11 +1053,6 @@ func printBuildOut(pp io.ReadCloser, out *os.File) {
 	pp.Close()
 }
 
-// CopyFile copies the contents of the file named src to the file named
-// by dst. The file will be created if it does not already exist. If the
-// destination file exists, all it's contents will be replaced by the contents
-// of the source file. The file mode will be copied from the source and
-// the copied data is synced/flushed to stable storage.
 func CopyFile(src, dst string) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
@@ -1090,9 +1135,6 @@ func ApplyTemplate(src, dst string, tmpl *Template) (err error) {
 	return nil
 }
 
-// CopyDir recursively copies a directory tree, attempting to preserve permissions.
-// Source directory must exist, destination directory must *not* exist.
-// Symlinks are ignored and skipped.
 func CopyDir(src, dst string, tmpl *Template) error {
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
