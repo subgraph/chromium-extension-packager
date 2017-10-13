@@ -22,3 +22,24 @@ COMMANDS:
 	update   [uuid] Update extension(s) package(s)
 	help, h         Shows a list of commands or help for one command
 ```
+
+```
+$ sudo chromium-extension-packager add --fetch gcbommkclmclpchllfjekcdonpmejbdp
+
+$ sudo chromium-extension-packager update gcbommkclmclpchllfjekcdonpmejbdp
+Building HTTPS Everywhere (gcbommkclmclpchllfjekcdonpmejbdp) version 2017.10.4...
+Extension pack already exists, skipping download.
+Building package template to: /var/lib/chromium-extension-packager/builds/https-everywhere-2017.10.4
+Successfully built extension package for HTTPS Everywhere (gcbommkclmclpchllfjekcdonpmejbdp) version 2017.10.4.
+
+$ sudo apt update -o Dir::Etc::sourcelist="sources.list.d/local-chromium-extension.list" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0"
+[...]
+
+$ apt policy chromium-extension-https-everywhere 
+chromium-extension-https-everywhere:
+  Installed: (none)
+  Candidate: 2017.10.4
+  Version table:
+     2017.10.4 500
+        500 file:/var/lib/chromium-extension-packager/builds ./ Packages
+```
