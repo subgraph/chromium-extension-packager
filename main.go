@@ -404,6 +404,10 @@ func removeExtension(c *cli.Context) {
 				fmt.Println("Canceled!")
 				os.Exit(0)
 			}
+			if err := extensions[ii].removeExtensionFiles(); err != nil {
+				fmt.Fprintf(os.Stderr, "Could not remove extension files: %v\n", err)
+				os.Exit(1)
+			}
 			extensions = append(extensions[:ii], extensions[ii+1:]...)
 			found = true
 			break
@@ -413,12 +417,16 @@ func removeExtension(c *cli.Context) {
 	if !found {
 		fmt.Println("Extension not found, nothing to remove.")
 		os.Exit(0)
-	} else {
-		fmt.Printf("Removed extension: %+v\n", ee)
 	}
 
-	err := saveExtensionList()
-	if err != nil {
+	fmt.Printf("Removed extension: %+v\n", ee)
+
+	if err := buildPackageIndex(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error building indexes: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := saveExtensionList(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
@@ -929,6 +937,35 @@ func (e *Extension) moveFinishedBuild() error {
 		err = os.Remove(pl)
 		if err != nil {
 			return fmt.Errorf("Could not remove spurious file `%s`: %+v", fname, err)
+		}
+	}
+	return nil
+}
+
+func (e *Extension) removeExtensionFiles() error {
+	bp := path.Join(WORK_DIR, BUILD_DIR)
+	rp := path.Join(WORK_DIR, REPO_DIR)
+	pname := strings.ToLower(strings.Replace(e.Name, " ", "-", -1))
+	bname := strings.Join([]string{pname, e.Version.String()}, "_")
+	dname := strings.Join([]string{pname, e.Version.String()}, "-")
+	_, err := os.Stat(rp)
+	if err != nil && os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return nil
+	}
+	cname := "chromium-extension-" + bname
+	discards := []string{
+		path.Join(bp, dname),
+		path.Join(rp, strings.Join([]string{cname, "_all.deb"}, "")),
+		path.Join(rp, strings.Join([]string{cname, ".dsc"}, "")),
+		path.Join(rp, strings.Join([]string{cname, ".tar.xz"}, "")),
+	}
+	for _, discard := range discards {
+		pl := filepath.Clean(discard)
+		err = os.RemoveAll(pl)
+		if err != nil {
+			return fmt.Errorf("Could not remove file `%s`: %+v", pl, err)
 		}
 	}
 	return nil
