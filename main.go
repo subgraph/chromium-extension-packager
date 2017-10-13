@@ -1,4 +1,5 @@
 // XXX: Check that itemprop="price" == 0, fail otherwise
+// XXX: Remove old versions from repository / build
 package main
 
 import (
@@ -834,15 +835,16 @@ func (e *Extension) prepareExtensionPackage(batchMode bool) (err error) {
 				err = e
 			}
 		}()
-		_, err = io.Copy(out, rc)
-		if err != nil {
+		if _, err = io.Copy(out, rc); err != nil {
 			return err
 		}
-		err = out.Sync()
-		if err != nil {
+		if err = out.Sync(); err != nil {
 			return err
 		}
 		if err := rc.Close(); err != nil {
+			return err
+		}
+		if err = out.Close(); err != nil {
 			return err
 		}
 		err = os.Chmod(dst, 0644) //f.Mode().Perm())
