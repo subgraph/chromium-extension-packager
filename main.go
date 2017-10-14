@@ -853,6 +853,13 @@ func (e *Extension) prepareExtensionPackage(batchMode bool) (err error) {
 		}
 	}
 
+	pmd := path.Join(sp, "_metadata")
+	if _, err = os.Stat(pmd); err == nil {
+		if err = os.RemoveAll(pmd); err != nil {
+			return fmt.Errorf("Could not remove superfluous directory `%s`: %+v", pmd, err)
+		}
+	}
+
 	return nil
 }
 
